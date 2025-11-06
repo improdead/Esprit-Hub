@@ -70,9 +70,7 @@ export default class MyPlayer extends Player {
           whiteboard.openDialog(network)
           break
         case ItemType.VENDINGMACHINE:
-          // hacky and hard-coded, but leaving it as is for now
-          const url = 'https://www.buymeacoffee.com/skyoffice'
-          openURL(url)
+          // Vending machine interaction - can be customized
           break
       }
     }

@@ -1,7 +1,7 @@
 {
-  "name": "skyoffice",
+  "name": "esprit-hub-client",
   "private": true,
-  "description": "Client for SkyOffice",
+  "description": "Client for Esprit-Hub - A virtual office application based on SkyOffice",
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",

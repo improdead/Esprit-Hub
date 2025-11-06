@@ -1,6 +1,8 @@
 # Getting Started with Vite
 
-SkyOffice's client side was bootstrapped with [Vite](https://vitejs.dev/).
+Esprit-Hub's client side was bootstrapped with [Vite](https://vitejs.dev/).
+
+Based on [SkyOffice](https://github.com/kevinshen56714/SkyOffice).
 
 ## Available Scripts
 
