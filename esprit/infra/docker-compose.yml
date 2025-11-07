@@ -11,7 +11,10 @@ services:
     depends_on:
       - skyoffice
       - gateway
-      - sim
+      sim:
+        condition: service_healthy
+      sim-realtime:
+        condition: service_healthy
 
   skyoffice:
     build: ../apps/skyoffice
@@ -35,41 +38,99 @@ services:
 
   # Sim.ai stack (from source)
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg17
     container_name: postgres
+    restart: unless-stopped
     environment:
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=sim
+      - POSTGRES_DB=simstudio
       - POSTGRES_USER=postgres
     volumes:
-      - ap-pg:/var/lib/postgresql/data
+      - sim-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "5432"
 
   redis:
     image: redis:7
     container_name: redis
     volumes:
-      - ap-redis:/data
+      - sim-redis:/data
+
+  sim-migrations:
+    build:
+      context: ../external/sim
+      dockerfile: docker/app.Dockerfile
+    container_name: sim-migrations
+    working_dir: /app/packages/db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/simstudio
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ['bun', 'run', 'db:migrate']
+    restart: 'no'
+
+  sim-realtime:
+    build:
+      context: ../external/sim
+      dockerfile: docker/realtime.Dockerfile
+    container_name: sim-realtime
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/simstudio
+      - NEXT_PUBLIC_APP_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - BETTER_AUTH_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '--quiet', 'http://127.0.0.1:3002/health']
+      interval: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    expose:
+      - "3002"
 
   sim:
-    build: ../external/sim
+    build:
+      context: ../external/sim
+      dockerfile: docker/app.Dockerfile
     container_name: sim
+    restart: unless-stopped
     environment:
-      - AP_POSTGRES_DATABASE=sim
-      - AP_POSTGRES_HOST=postgres
-      - AP_POSTGRES_PORT=5432
-      - AP_POSTGRES_USERNAME=postgres
-      - AP_POSTGRES_PASSWORD=postgres
-      - AP_REDIS_HOST=redis
-      - AP_REDIS_PORT=6379
-      - AP_FRONTEND_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
-      - AP_TELEMETRY_ENABLED=false
-      - AP_ENVIRONMENT=prod
-      - AP_EXECUTION_MODE=UNSANDBOXED
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/simstudio
+      - BETTER_AUTH_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - NEXT_PUBLIC_APP_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-in-production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-change-me-in-production-32chars}
+      - COPILOT_API_KEY=${COPILOT_API_KEY:-}
+      - SIM_AGENT_API_URL=${SIM_AGENT_API_URL:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
+      - SOCKET_SERVER_URL=http://sim-realtime:3002
+      - NEXT_PUBLIC_SOCKET_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      sim-migrations:
+        condition: service_completed_successfully
+      sim-realtime:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '--quiet', 'http://127.0.0.1:3000']
+      interval: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     expose:
-      - "80"
+      - "3000"
 
   nango:
     image: nangohq/nango:latest
@@ -86,5 +147,5 @@ services:
       - "4000"
 
 volumes:
-  ap-pg:
-  ap-redis:
+  sim-pg:
+  sim-redis:
