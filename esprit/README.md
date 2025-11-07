@@ -55,8 +55,11 @@ Once all services are running, access:
 
 ## Configuration
 
+The `.env` file should be in the `esprit/` directory (not in `esprit/infra/`).
+
 1. Copy the example environment file:
    ```bash
+   # From the esprit/ directory:
    cp .env.example .env
    ```
 
@@ -65,12 +68,17 @@ Once all services are running, access:
    - `ENCRYPTION_KEY` - Must be exactly 32 characters
    - `PUBLIC_ORIGIN` - Your public URL (keep as http://localhost:8080 for local testing)
 
+**Note**: The `start.sh` script will automatically create `.env` from `.env.example` if it doesn't exist.
+
 ## Stopping the Application
 
 ```bash
+# From the esprit/infra directory:
 cd esprit/infra
 docker compose down
 ```
+
+**Important**: Always run `docker compose` commands from the `esprit/infra/` directory, as that's where `docker-compose.yml` is located.
 
 To also remove volumes (database data):
 ```bash
