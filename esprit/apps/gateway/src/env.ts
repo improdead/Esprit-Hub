@@ -1,5 +1,5 @@
 export const env = {
-  AP_BASE: process.env.AP_BASE || 'http://activepieces',
+  AP_BASE: process.env.AP_BASE || 'http://sim',
   AP_TOKEN: process.env.AP_TOKEN || '',
   AP_PROJECT: process.env.AP_PROJECT || '',
   PORT: process.env.PORT || '3001',

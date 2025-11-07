@@ -1,9 +1,9 @@
-# Agent Builder/Runner Guide (Activepieces + SkyOffice)
+# Agent Builder/Runner Guide (Sim.ai + SkyOffice)
 
-This guide explains how to build, map, and run agents using Activepieces embedded inside your product, with live status in SkyOffice.
+This guide explains how to build, map, and run agents using Sim.ai embedded inside your product, with live status in SkyOffice.
 
 Quick links
-- Open the builder: click “Open Activepieces” (header) → `/studio/`
+- Open the builder: click "Open Sim.ai" (header) → `/studio/`
 - Event callback from flows (inside Docker network): `http://skyoffice-gateway:3001/api/events`
 - Agent mapping file: `apps/gateway/data/agents.json`
 
@@ -18,10 +18,10 @@ Quick links
   - POST /api/events
   - GET /api/stream?npc=
   - POST /api/build (optional, not implemented yet)
-- Activepieces (self-hosted) — runtime + visual builder (embedded at /studio/)
+- Sim.ai (self-hosted) — runtime + visual builder (embedded at /studio/)
 - Nango (OAuth broker) for Google/Slack (optional)
 - LiteLLM (LLM gateway) for AI steps (optional)
-- Postgres (metadata), Redis (AP)
+- Postgres (metadata), Redis (Sim.ai)
 
 All services run behind one Nginx reverse proxy on http://localhost:8080.
 
@@ -29,8 +29,8 @@ All services run behind one Nginx reverse proxy on http://localhost:8080.
 
 2) High-level architecture
 - UI ↔ Gateway via REST + SSE
-- Gateway ↔ Activepieces via internal Docker network
-- Activepieces flows call Gateway /api/events to broadcast progress
+- Gateway ↔ Sim.ai via internal Docker network
+- Sim.ai flows call Gateway /api/events to broadcast progress
 - Reverse proxy exposes UI (/), API (/api), and Studio (/studio/)
 
 ---
@@ -59,7 +59,7 @@ B) MailOps (scheduled)
 
 Tips
 - For AI steps you can point to LiteLLM at `http://litellm:4000` or use vendor directly.
-- For Google/Slack, either connect via AP’s built-in connectors or broker with Nango.
+- For Google/Slack, either connect via Sim.ai's built-in connectors or broker with Nango.
 
 ---
 
@@ -67,8 +67,8 @@ Tips
 - Edit `apps/gateway/data/agents.json` and set webhook URLs:
 ```
 [
-  { "agent":"scheduler", "npc":"scheduler", "webhookUrl":"http://activepieces/api/v1/webhooks/catch/<paste-from-studio>" },
-  { "agent":"mailops",   "npc":"mailops",   "webhookUrl":"http://activepieces/api/v1/webhooks/catch/<optional-if-cron>" }
+  { "agent":"scheduler", "npc":"scheduler", "webhookUrl":"http://sim/api/v1/webhooks/catch/<paste-from-studio>" },
+  { "agent":"mailops",   "npc":"mailops",   "webhookUrl":"http://sim/api/v1/webhooks/catch/<optional-if-cron>" }
 ]
 ```
 - Restart the Gateway to reload mapping:
@@ -83,7 +83,7 @@ How it works
 
 5) Use the product
 - Open `http://localhost:8080`
-- Click “Open Activepieces” to build/edit flows
+- Click "Open Sim.ai" to build/edit flows
 - Back in SkyOffice, click Run on Scheduler/MailOps; watch logs update via SSE.
 
 ---
@@ -92,7 +92,7 @@ How it works
 - `POST /api/build` is stubbed. When implemented, it will:
   - Accept `{ brief, defaults? }`
   - Call LLM (via LiteLLM) to classify/extract settings
-  - Create & publish flow via Activepieces API
+  - Create & publish flow via Sim.ai API
   - Return `{ agentId, name, webhookUrl }` and register mapping
 
 ---
@@ -105,7 +105,7 @@ How it works
 ---
 
 8) Troubleshooting
-- Studio not loading in drawer? Use `/studio/` (trailing slash) and ensure you’re on `http://localhost:8080` (the proxy), not AP directly.
+- Studio not loading in drawer? Use `/studio/` (trailing slash) and ensure you're on `http://localhost:8080` (the proxy), not Sim.ai directly.
 - SSE drops: confirm proxy buffering is disabled for `/api/stream` and Gateway remains healthy.
-- Flow can’t reach Gateway: use Docker DNS inside flows (`http://skyoffice-gateway:3001`).
+- Flow can't reach Gateway: use Docker DNS inside flows (`http://skyoffice-gateway:3001`).
 - 404 on run: ensure `agents.json` is populated with the correct webhook URL(s).

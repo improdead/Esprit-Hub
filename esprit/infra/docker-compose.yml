@@ -11,7 +11,7 @@ services:
     depends_on:
       - skyoffice
       - gateway
-      - activepieces
+      - sim
 
   skyoffice:
     build: ../apps/skyoffice
@@ -27,19 +27,19 @@ services:
       - PORT=${PORT:-3001}
       - AGENT_MAP_FILE=${AGENT_MAP_FILE:-/app/data/agents.json}
     depends_on:
-      - activepieces
+      - sim
     expose:
       - "3001"
     volumes:
       - ../apps/gateway/data:/app/data
 
-  # Activepieces stack (from source)
+  # Sim.ai stack (from source)
   postgres:
     image: postgres:16
     container_name: postgres
     environment:
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=activepieces
+      - POSTGRES_DB=sim
       - POSTGRES_USER=postgres
     volumes:
       - ap-pg:/var/lib/postgresql/data
@@ -50,11 +50,11 @@ services:
     volumes:
       - ap-redis:/data
 
-  activepieces:
-    build: ../external/activepieces
-    container_name: activepieces
+  sim:
+    build: ../external/sim
+    container_name: sim
     environment:
-      - AP_POSTGRES_DATABASE=activepieces
+      - AP_POSTGRES_DATABASE=sim
       - AP_POSTGRES_HOST=postgres
       - AP_POSTGRES_PORT=5432
       - AP_POSTGRES_USERNAME=postgres

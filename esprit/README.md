@@ -1,12 +1,12 @@
-# SkyOffice + Activepieces MVP stack
+# SkyOffice + Sim.ai MVP stack
 
-This is a single-product stack that embeds the Activepieces Studio inside your app, exposes a tiny Gateway API for running agents and streaming live status to the UI, and ships behind one reverse-proxy for a same-origin experience.
+This is a single-product stack that embeds the Sim.ai Studio inside your app, exposes a tiny Gateway API for running agents and streaming live status to the UI, and ships behind one reverse-proxy for a same-origin experience.
 
 What you get in this folder:
 - apps/gateway: Fastify/TypeScript API with /api/run, /api/events, /api/stream (SSE)
 - apps/skyoffice: Minimal React UI with NPC Panel and Builder Drawer (iframe /studio)
 - infra/docker-compose.yml: one command to boot the full product (reverse proxy, AP from source, Postgres, Redis, Nango, LiteLLM)
-- infra/nginx.conf: proxies / → UI, /api → Gateway, /studio → Activepieces UI
+- infra/nginx.conf: proxies / → UI, /api → Gateway, /studio → Sim.ai UI
 - agent-templates/: placeholders for your first flows (Scheduler, MailOps)
 
 Quick start
@@ -21,9 +21,9 @@ Quick start
 - From this folder (esprit/):
   docker compose -f infra/docker-compose.yml up -d --build
 
-4) Initialize Activepieces (built from the cloned source under external/activepieces)
+4) Initialize Sim.ai (built from the cloned source under external/sim)
 - Open http://localhost:8080/studio/
-- Create an admin account (first-run flow), then connect Google/Slack (Nango or AP-native connectors).
+- Create an admin account (first-run flow), then connect Google/Slack (Nango or native connectors).
 
 5) Create flows
 - Build two flows in Studio:
@@ -46,8 +46,8 @@ Quick start
 
 Notes
 - Auth: For MVP this stack is unsecured locally. Put it behind your SSO or add cookie auth via the Gateway + Nginx auth_request before going public.
-- LLM: LiteLLM is provided; point Activepieces AI steps to it (http://litellm:4000) or connect directly to your LLM vendor.
-- Nango: If you prefer brokered OAuth, configure Nango and use its connection IDs in your flows; or use AP’s built-in Google/Slack connectors.
+- LLM: LiteLLM is provided; point Sim.ai AI steps to it (http://litellm:4000) or connect directly to your LLM vendor.
+- Nango: If you prefer brokered OAuth, configure Nango and use its connection IDs in your flows; or use Sim.ai's built-in Google/Slack connectors.
 - Optional /api/build is stubbed for later (AI → flow synthesis). You can add it once you decide on prompts/models.
 
 Docs
@@ -55,5 +55,5 @@ Docs
 - Implementation status: docs/implementation-status.md
 
 Troubleshooting
-- If /studio doesn’t render in the drawer, ensure X-Frame-Options is SAMEORIGIN (Nginx config already sets this) and you’re opening http://localhost:8080 (the reverse proxy), not the AP container directly.
+- If /studio doesn't render in the drawer, ensure X-Frame-Options is SAMEORIGIN (Nginx config already sets this) and you're opening http://localhost:8080 (the reverse proxy), not the Sim.ai container directly.
 - SSE drops? Ensure proxy_buffering off is applied to /api/stream in Nginx and that the Gateway stays up.
