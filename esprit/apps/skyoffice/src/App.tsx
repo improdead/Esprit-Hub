@@ -14,7 +14,7 @@ export function App() {
           <b>SkyOffice</b>
         </div>
         <div>
-          <a className="btn secondary" href="/studio/" target="_blank" rel="noopener noreferrer">Open Activepieces</a>
+          <a className="btn secondary" href="/studio/" target="_blank" rel="noopener noreferrer">Open Sim Studio</a>
         </div>
       </header>
       <div className="container">

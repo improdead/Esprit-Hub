@@ -25,7 +25,7 @@ Last updated: 2025-11-07
 
 ## In Progress 🛠️
 - Flows: Create Scheduler (webhook) and MailOps (cron) in Studio
-- Populate `agents.json` with real webhooks from Studio
+- Populate `esprit/apps/gateway/data/agents.json` with real webhooks from Studio
 - Configure connectors (Google, Slack) via Studio (or brokered via Nango)
 - LiteLLM routing (optional) — point AP AI steps to `http://litellm:4000` if desired
 
@@ -42,6 +42,13 @@ Last updated: 2025-11-07
 - Hardening: CSP, CORS policy, rate limiting, request size limits
 - UX: Dynamic agent list fetched from Gateway instead of static list
 - Error surfaces in UI (failed run, AP errors) with retry
+
+## How to bring it up quickly
+- Compose: `cd esprit && cp .env.example .env && docker compose -f infra/docker-compose.yml up -d --build`
+- Open Studio: `http://localhost:8080/studio/` (create account, add connections)
+- Create two flows (Scheduler + MailOps), copy webhook(s)
+- Paste them into `esprit/apps/gateway/data/agents.json`, then `docker compose -f infra/docker-compose.yml restart gateway`
+- Visit UI: `http://localhost:8080` and click Run — watch SSE logs
 
 ## Risks/Notes 📌
 - Keep `/studio/` trailing slash in links/iframe to avoid routing conflicts

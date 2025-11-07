@@ -26,6 +26,7 @@ Esprit-Hub is a virtual office application that allows teams to collaborate in a
 - 💬 In-game chat system
 - 🎨 Multiple character avatars to choose from
 - 🪑 Interactive furniture and objects
+- 🤖 **AI Agent Integration** with [Sim.ai](https://sim.ai) - Build and deploy AI workflows directly from the virtual office
 
 ## Controls
 
@@ -41,27 +42,62 @@ You'll need [Node.js](https://nodejs.org/en/), [npm](https://www.npmjs.com/) or 
 
 ## Getting Started
 
-Clone this repository to your local machine:
+There are two ways to run Esprit-Hub:
+
+### Option 1: Quick Start (Game Only)
+
+For just the virtual office game without AI agents:
 
 ```bash
 git clone https://github.com/improdead/Esprit-Hub.git
-```
-
-To start the server, go into the project folder and install dependencies/run start command:
-
-```bash
 cd Esprit-Hub
-yarn && yarn start
+./scripts/run-all.sh
 ```
 
-To start the client, go into the client folder and install dependencies/run start command:
+The client will be available at [http://localhost:5173](http://localhost:5173).
 
+👉 For a detailed step-by-step guide, check out `docs/RUNNING_THE_APP.md`.
+
+### Option 2: Full Stack with AI Agents (Docker)
+
+For the complete experience with AI agent integration using Sim.ai:
+
+**Prerequisites:**
+- Docker Desktop 4.x+
+- Generate secrets: `openssl rand -hex 32` (run twice for auth secret and encryption key)
+
+**Steps:**
+
+1. Clone and configure:
 ```bash
-cd Esprit-Hub/client
-yarn && yarn dev
+git clone https://github.com/improdead/Esprit-Hub.git
+cd Esprit-Hub/esprit
+cp .env.example .env
 ```
 
-The client will be available at [http://localhost:3000](http://localhost:3000)
+2. Edit `.env` and set your secrets:
+```bash
+BETTER_AUTH_SECRET=<your-generated-secret>
+ENCRYPTION_KEY=<your-generated-key>
+```
+
+3. Start everything with Docker:
+```bash
+docker compose -f infra/docker-compose.yml up -d --build
+```
+
+4. Access the application:
+- **Main app**: [http://localhost:8080](http://localhost:8080)
+- **Sim.ai Studio**: [http://localhost:8080/studio/](http://localhost:8080/studio/)
+- **Create AI workflows** in Sim Studio and trigger them from NPCs in the virtual office
+
+👉 For detailed AI agent setup instructions, see `esprit/README.md`.
+
+### Option 3: Local Development (No Docker)
+
+For local development without Docker:
+
+👉 See `docs/LOCAL_STACK.md` for complete instructions on running Sim.ai, Gateway, and the game locally.
 
 ## Credits
 

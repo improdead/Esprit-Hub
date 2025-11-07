@@ -11,7 +11,7 @@ services:
     depends_on:
       - skyoffice
       - gateway
-      - activepieces
+      - simstudio
 
   skyoffice:
     build: ../apps/skyoffice
@@ -21,55 +21,97 @@ services:
     build: ../apps/gateway
     container_name: skyoffice-gateway
     environment:
-      - AP_BASE=${AP_BASE}
-      - AP_TOKEN=${AP_TOKEN}
-      - AP_PROJECT=${AP_PROJECT}
+      - SIM_BASE=${SIM_BASE:-http://simstudio:3000}
       - PORT=${PORT:-3001}
       - AGENT_MAP_FILE=${AGENT_MAP_FILE:-/app/data/agents.json}
     depends_on:
-      - activepieces
+      simstudio:
+        condition: service_healthy
     expose:
       - "3001"
     volumes:
       - ../apps/gateway/data:/app/data
 
-  # Activepieces stack (from source)
-  postgres:
-    image: postgres:16
-    container_name: postgres
+  # Sim.ai stack
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: simstudio-db
+    restart: unless-stopped
     environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=activepieces
-      - POSTGRES_USER=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-simstudio}
     volumes:
-      - ap-pg:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-    container_name: redis
-    volumes:
-      - ap-redis:/data
-
-  activepieces:
-    build: ../external/activepieces
-    container_name: activepieces
-    environment:
-      - AP_POSTGRES_DATABASE=activepieces
-      - AP_POSTGRES_HOST=postgres
-      - AP_POSTGRES_PORT=5432
-      - AP_POSTGRES_USERNAME=postgres
-      - AP_POSTGRES_PASSWORD=postgres
-      - AP_REDIS_HOST=redis
-      - AP_REDIS_PORT=6379
-      - AP_FRONTEND_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
-      - AP_TELEMETRY_ENABLED=false
-      - AP_ENVIRONMENT=prod
-      - AP_EXECUTION_MODE=UNSANDBOXED
-    depends_on:
-      - postgres
-      - redis
+      - sim-pg:/var/lib/postgresql/data
     expose:
-      - "80"
+      - "5432"
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrations:
+    image: ghcr.io/simstudioai/migrations:latest
+    container_name: simstudio-migrations
+    working_dir: /app/packages/db
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-simstudio}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ['bun', 'run', 'db:migrate']
+    restart: 'no'
+
+  realtime:
+    image: ghcr.io/simstudioai/realtime:latest
+    container_name: simstudio-realtime
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-simstudio}
+      - NEXT_PUBLIC_APP_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - BETTER_AUTH_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-your_auth_secret_here}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "3002"
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '--quiet', 'http://127.0.0.1:3002/health']
+      interval: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  simstudio:
+    image: ghcr.io/simstudioai/simstudio:latest
+    container_name: simstudio
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-simstudio}
+      - BETTER_AUTH_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - NEXT_PUBLIC_APP_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-your_auth_secret_here}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-your_encryption_key_here}
+      - SOCKET_SERVER_URL=http://realtime:3002
+      - NEXT_PUBLIC_SOCKET_URL=${PUBLIC_ORIGIN:-http://localhost:8080}/realtime
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+      realtime:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '--quiet', 'http://127.0.0.1:3000']
+      interval: 90s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   nango:
     image: nangohq/nango:latest
@@ -86,5 +128,4 @@ services:
       - "4000"
 
 volumes:
-  ap-pg:
-  ap-redis:
+  sim-pg:

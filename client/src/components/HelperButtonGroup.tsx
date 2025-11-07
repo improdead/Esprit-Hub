@@ -15,6 +15,7 @@ import GitHubIcon from '@mui/icons-material/GitHub'
 import TwitterIcon from '@mui/icons-material/Twitter'
 import VideogameAssetIcon from '@mui/icons-material/VideogameAsset'
 import VideogameAssetOffIcon from '@mui/icons-material/VideogameAssetOff'
+import BuildIcon from '@mui/icons-material/Build'
 
 import { BackgroundMode } from '../../../types/BackgroundMode'
 import { setShowJoystick, toggleBackgroundMode } from '../stores/UserStore'
@@ -115,6 +116,7 @@ export default function HelperButtonGroup() {
   const roomName = useAppSelector((state) => state.room.roomName)
   const roomDescription = useAppSelector((state) => state.room.roomDescription)
   const dispatch = useAppDispatch()
+  const studioUrl = import.meta.env.VITE_STUDIO_URL || '/studio/'
 
   return (
     <Backdrop>
@@ -213,6 +215,16 @@ export default function HelperButtonGroup() {
             target="_blank"
           >
             <GitHubIcon />
+          </StyledFab>
+        </Tooltip>
+        <Tooltip title="Open Agent Builder">
+          <StyledFab
+            size="small"
+            href={studioUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <BuildIcon />
           </StyledFab>
         </Tooltip>
         <Tooltip title="Switch Background Theme">
