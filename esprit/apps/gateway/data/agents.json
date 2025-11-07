@@ -1,0 +1,4 @@
+[
+  {"agent":"scheduler","npc":"scheduler","webhookUrl":"http://activepieces/api/v1/webhooks/catch/<replace>"},
+  {"agent":"mailops","npc":"mailops","webhookUrl":"http://activepieces/api/v1/webhooks/catch/<replace-or-empty-if-cron>"}
+]

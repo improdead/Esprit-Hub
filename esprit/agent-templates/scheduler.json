@@ -1,0 +1,10 @@
+{
+  "name": "Scheduler",
+  "description": "Catch webhook → parse text → create Google Calendar event → Slack notification",
+  "notes": "In Activepieces: add Webhook trigger; ask ChatGPT to parse payload.text → {title,start,end,attendees}; Google Calendar: Create Event; Slack: Post Message; HTTP Request: POST /api/events {npc:\"scheduler\", type:\"done\", data:{...}}",
+  "placeholders": {
+    "webhookUrl": "",
+    "slackChannel": "#ops",
+    "calendarId": "primary"
+  }
+}

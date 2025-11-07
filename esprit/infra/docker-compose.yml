@@ -1,0 +1,90 @@
+version: "3.9"
+
+services:
+  reverse-proxy:
+    image: nginx:stable
+    container_name: skyoffice-proxy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - skyoffice
+      - gateway
+      - activepieces
+
+  skyoffice:
+    build: ../apps/skyoffice
+    container_name: skyoffice-ui
+
+  gateway:
+    build: ../apps/gateway
+    container_name: skyoffice-gateway
+    environment:
+      - AP_BASE=${AP_BASE}
+      - AP_TOKEN=${AP_TOKEN}
+      - AP_PROJECT=${AP_PROJECT}
+      - PORT=${PORT:-3001}
+      - AGENT_MAP_FILE=${AGENT_MAP_FILE:-/app/data/agents.json}
+    depends_on:
+      - activepieces
+    expose:
+      - "3001"
+    volumes:
+      - ../apps/gateway/data:/app/data
+
+  # Activepieces stack (from source)
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=activepieces
+      - POSTGRES_USER=postgres
+    volumes:
+      - ap-pg:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: redis
+    volumes:
+      - ap-redis:/data
+
+  activepieces:
+    build: ../external/activepieces
+    container_name: activepieces
+    environment:
+      - AP_POSTGRES_DATABASE=activepieces
+      - AP_POSTGRES_HOST=postgres
+      - AP_POSTGRES_PORT=5432
+      - AP_POSTGRES_USERNAME=postgres
+      - AP_POSTGRES_PASSWORD=postgres
+      - AP_REDIS_HOST=redis
+      - AP_REDIS_PORT=6379
+      - AP_FRONTEND_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - AP_TELEMETRY_ENABLED=false
+      - AP_ENVIRONMENT=prod
+      - AP_EXECUTION_MODE=UNSANDBOXED
+    depends_on:
+      - postgres
+      - redis
+    expose:
+      - "80"
+
+  nango:
+    image: nangohq/nango:latest
+    container_name: nango
+    environment:
+      - NANGO_SERVER_URL=http://localhost:3003
+    expose:
+      - "3003"
+
+  litellm:
+    image: ghcr.io/berriai/litellm:latest
+    container_name: litellm
+    expose:
+      - "4000"
+
+volumes:
+  ap-pg:
+  ap-redis:

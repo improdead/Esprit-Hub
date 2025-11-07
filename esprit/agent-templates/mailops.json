@@ -1,0 +1,9 @@
+{
+  "name": "MailOps",
+  "description": "Cron → Gmail unread → AI summarize top 5 → Slack digest → HTTP Request to /api/events",
+  "notes": "In Activepieces: Schedule trigger (e.g., 0 9 * * *) → Gmail: List Messages (INBOX, unread) → Ask ChatGPT to summarize → Slack: Send message → HTTP Request: POST /api/events {npc:\"mailops\", type:\"done\", data:{...}}",
+  "placeholders": {
+    "cron": "*/15 * * * *",
+    "slackChannel": "#ops"
+  }
+}
