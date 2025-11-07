@@ -32,7 +32,8 @@ services:
       - PORT=${PORT:-3001}
       - AGENT_MAP_FILE=${AGENT_MAP_FILE:-/app/data/agents.json}
     depends_on:
-      - sim
+      sim:
+        condition: service_healthy
     expose:
       - "3001"
     volumes:
