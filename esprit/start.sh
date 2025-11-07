@@ -46,10 +46,10 @@ MAX_WAIT=300
 WAIT_TIME=0
 while [ $WAIT_TIME -lt $MAX_WAIT ]; do
     # Count healthy services
-    HEALTHY_COUNT=$(docker compose ps --format json 2>/dev/null | grep -c '"Health":"healthy"' || echo "0")
+    HEALTHY_COUNT=$(docker compose ps --format json 2>/dev/null | jq -c '.[] | select(.Health=="healthy")' | wc -l)
 
     # Check if migrations completed
-    MIGRATIONS_STATUS=$(docker compose ps sim-migrations --format json 2>/dev/null | grep -o '"State":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
+    MIGRATIONS_STATUS=$(docker compose ps sim-migrations --format json 2>/dev/null | jq -r '.[0].State // "unknown"')
 
     if [ "$HEALTHY_COUNT" -ge 2 ] && [ "$MIGRATIONS_STATUS" = "exited" ]; then
         echo "   ✅ Core services are healthy and migrations completed!"
