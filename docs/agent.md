@@ -1,138 +1,241 @@
-# Agent Builder/Runner Guide (Activepieces + SkyOffice)
+# 🤖 Esprit-Hub Agent Documentation
 
-This end-to-end guide shows how to run the full stack, build flows in Activepieces, map them to in‑app agents, and use live status in SkyOffice. It also covers local dev without Docker, environment variables, and troubleshooting.
+**Master guide for building, deploying, and monitoring AI agents in Esprit-Hub**
 
-Quick links
-- Open the builder: click “Open Activepieces” (header) → `/studio/`
-- Event callback from flows (inside Docker network): `http://skyoffice-gateway:3001/api/events`
-- Agent mapping file: `esprit/apps/gateway/data/agents.json`
+Welcome! This is your central hub for everything related to agents in Esprit-Hub. Whether you're building new workflows, integrating agents with the game, or troubleshooting issues, you'll find detailed guides below.
 
-—
+---
 
-1) What you ship (scope)
-- SkyOffice UI (React/TS)
-  - NPC Panel (run buttons, live status, logs)
-  - Builder Drawer (iframe of `/studio/`, optional; we also offer an “Open Activepieces” link)
-- Gateway API (Fastify/TS)
-  - `POST /api/run/:agent` — trigger an agent, forward to AP webhook, emit `started`
-  - `POST /api/events` — flows post progress; Gateway rebroadcasts over SSE
-  - `GET /api/stream?npc=` — SSE live status per NPC
-  - `POST /api/build` — optional, stubbed for AI Builder
-- Activepieces (self-hosted) — runtime + visual builder (embedded at `/studio/`)
-- Optional services — Nango (OAuth broker), LiteLLM (LLM gateway), Postgres, Redis
+## 📚 Documentation Structure
 
-All services run behind one Nginx reverse proxy on `http://localhost:8080` when using Docker Compose.
+### Core Agent Guides
 
-—
+These guides cover the Sim.ai integration and agent management system:
 
-2) Run the stack
+1. **[Getting Started with Agents](../esprit/docs/agent.md)**
+   - Quick overview of the agent system
+   - First steps with Sim.ai Studio
+   - Running your first workflows
+   - Agent mapping basics
 
-Option A — Docker Compose (recommended)
-- Prereqs: Docker Desktop 4.x+
-- From `esprit/` root:
-  - `cp .env.example .env` (edit if needed)
-  - `docker compose -f infra/docker-compose.yml up -d --build`
-- Open:
-  - App: `http://localhost:8080`
-  - Studio: `http://localhost:8080/studio/` (create account on first run)
+2. **[Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md)** ⭐ Start here if building workflows
+   - Workflow structure and anatomy
+   - Trigger types (webhooks, schedules, manual)
+   - Common step patterns
+   - Error handling strategies
+   - Best practices for automation
 
-Option B — Local dev (no Docker)
-- Run Gateway:
-  - `cd esprit/apps/gateway && yarn && yarn dev`
-  - Gateway listens on `http://localhost:3001`
-- Run UI:
-  - `cd esprit/apps/skyoffice && yarn && yarn dev`
-  - Vite prints the local URL (e.g., `http://localhost:5173`)
-- Run Activepieces separately:
-  - Use a managed AP, or run AP locally (Docker or `pnpm dev` in `esprit/external/activepieces`)
-  - Set `VITE` proxy or CORS as needed; in local dev, the Studio may not be same-origin, so open it in a new tab.
-- See `docs/LOCAL_STACK.md` for a step-by-step “everything on localhost with no Docker” runbook.
+3. **[Gateway API Reference](../esprit/docs/agents/GATEWAY.md)** ⭐ Start here if integrating with external systems
+   - Complete API endpoint documentation
+   - Agent triggering (`POST /api/run/:agent`)
+   - Event streaming (`GET /api/stream?npc=X`)
+   - Agent mapping configuration
+   - Webhook management
 
-—
+4. **[SkyOffice UI Integration](../esprit/docs/agents/SKYOFFICE_UI.md)** ⭐ Start here if building the UI
+   - UI architecture and components
+   - Real-time status updates
+   - Log streaming and display
+   - Builder drawer integration
+   - Extending the interface
 
-3) Configure environment
+5. **[Agent Templates & Examples](../esprit/docs/agents/TEMPLATES.md)**
+   - Pre-built agent templates
+   - Scheduler workflow (calendar integration)
+   - MailOps workflow (email automation)
+   - Content generation agents
+   - Custom template creation guide
 
-Core variables (Compose reads `.env` in `esprit/`):
-- `PUBLIC_ORIGIN` — public base URL of the proxy (default `http://localhost:8080`)
-- `AP_BASE` — internal AP base URL for Gateway (default `http://activepieces` in Compose)
-- `AP_TOKEN`, `AP_PROJECT` — if you use authenticated AP API calls later
-- `PORT` — Gateway port (default 3001)
-- `AGENT_MAP_FILE` — mapping file path (default `/app/data/agents.json`)
-- Client-side (Vite) env: create `client/.env.local` if you need to override the builder link, e.g.,
-  - `VITE_STUDIO_URL=http://localhost:8080/studio/` (useful when UI runs on `5173` but Activepieces lives behind another origin)
+6. **[Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md)** ⭐ Start here for going to production
+   - Local development setup
+   - Testing agents in isolation
+   - Docker deployment
+   - Agent monitoring and logging
+   - Performance optimization
+   - Production checklist
 
-—
+7. **[Troubleshooting & FAQ](../esprit/docs/agents/TROUBLESHOOTING.md)**
+   - Common issues and solutions
+   - Debugging workflows
+   - Network and connectivity issues
+   - SSE streaming problems
+   - Workflow execution errors
 
-4) Build your first two agents (flows)
+---
 
-A) Scheduler (webhook-driven)
-- In `/studio/` create a new flow:
-  - Trigger: Webhook – Catch Hook
-  - Steps:
-    - AI: parse free text → `{title, start, end, attendees[]}`
-    - Google Calendar: Create Event (with Meet)
-    - Slack: Send Message (event summary + link)
-    - HTTP Request: `POST http://skyoffice-gateway:3001/api/events`
-      - Body JSON: `{ "npc":"scheduler", "type":"done", "data": { /* details */ } }`
-- Copy the Webhook URL for this flow.
+## 🎮 Game Integration Guides
 
-B) MailOps (scheduled)
-- In `/studio/` create a new flow:
-  - Trigger: Schedule (e.g., `0 9 * * *`)
-  - Steps:
-    - Gmail: List Messages (INBOX, unread)
-    - AI: summarize top 5 with action items
-    - Slack: Send Message (digest)
-    - HTTP Request: `POST http://skyoffice-gateway:3001/api/events`
-      - Body JSON: `{ "npc":"mailops", "type":"done", "data": { /* details */ } }`
+Integrating agents with the Esprit-Hub game world:
 
-Tips
-- For AI steps, you may use LiteLLM at `http://litellm:4000` or vendor API directly.
-- For Google/Slack, connect via AP’s built-in connectors or broker using Nango.
+8. **[Game Client Agent Integration](../client/docs/AGENT_INTEGRATION.md)**
+   - How agents affect game state
+   - Triggering agents from game events
+   - Real-time agent updates in-game
+   - NPC behavior agents
 
-—
+9. **[Game Server Agent Integration](../server/docs/AGENT_INTEGRATION.md)**
+   - Server-side agent execution
+   - Colyseus event broadcasting
+   - Agent state synchronization
+   - Multiplayer agent coordination
 
-5) Map agents to flows (Gateway)
-- Edit `esprit/apps/gateway/data/agents.json` and paste webhook URLs:
+---
+
+## 🗂️ Related Documentation
+
+- **[System Architecture](../esprit/docs/ARCHITECTURE.md)** - Deep dive into how all components connect
+- **[Project README](../README.md)** - Project overview and quick start
+- **[Local Development Setup](./LOCAL_STACK.md)** - How to run everything locally
+- **[Running the App](./RUNNING_THE_APP.md)** - Step-by-step guide to start the full stack
+
+---
+
+## 🚀 Quick Start Paths
+
+### "I want to build an agent workflow"
+1. Read: [Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md)
+2. Review: [Agent Templates & Examples](../esprit/docs/agents/TEMPLATES.md)
+3. Follow: Getting started guide in [Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md)
+4. Test with: [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md)
+
+### "I want to integrate agents into the game"
+1. Read: [Game Client Agent Integration](../client/docs/AGENT_INTEGRATION.md)
+2. Read: [Game Server Agent Integration](../server/docs/AGENT_INTEGRATION.md)
+3. Reference: [Gateway API Reference](../esprit/docs/agents/GATEWAY.md)
+4. Test with: [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md)
+
+### "I need to connect external systems to agents"
+1. Read: [Gateway API Reference](../esprit/docs/agents/GATEWAY.md)
+2. Review: Webhook trigger section in [Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md)
+3. Examples: [Agent Templates & Examples](../esprit/docs/agents/TEMPLATES.md)
+
+### "I'm having agent issues"
+1. Check: [Troubleshooting & FAQ](../esprit/docs/agents/TROUBLESHOOTING.md)
+2. Review: [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md) debugging section
+3. Reference: [Gateway API Reference](../esprit/docs/agents/GATEWAY.md) for endpoint issues
+
+### "I need to deploy to production"
+1. Read: [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md) - full guide
+2. Security: Check security checklist in deployment guide
+3. Monitor: Review monitoring section in [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md)
+4. Reference: [System Architecture](../esprit/docs/ARCHITECTURE.md) for scaling info
+
+---
+
+## 🎯 Key Concepts
+
+### What is an Agent?
+An agent is an automated workflow in Sim.ai that performs a specific task. It can be triggered by:
+- **Webhooks** - External system calls or manual triggers
+- **Schedules** - Cron-like scheduling (e.g., daily at 9 AM)
+- **Events** - Internal system events
+
+### Agent Lifecycle
 ```
-[
-  { "agent":"scheduler", "npc":"scheduler", "webhookUrl":"http://activepieces/api/v1/webhooks/catch/<paste-from-studio>" },
-  { "agent":"mailops",   "npc":"mailops",   "webhookUrl":"http://activepieces/api/v1/webhooks/catch/<optional-if-cron>" }
-]
+Webhook/Schedule → Agent Triggered → Gateway → Sim.ai Execution → Events Posted → UI Updated
 ```
-- Restart Gateway to reload mapping:
-  - Compose: `docker compose -f infra/docker-compose.yml restart gateway`
-  - Local dev: stop/start `yarn dev`
 
-How it works
-- UI calls `POST /api/run/:agent` → Gateway forwards to AP webhook, emits `started` SSE.
-- Your flow calls `POST /api/events` as it progresses → UI shows pills/logs live via SSE.
+### Event Streaming
+Agents report progress via Server-Sent Events (SSE). The frontend subscribes to an agent's channel and receives real-time updates:
+- `started` - Agent began execution
+- `step` - Progress checkpoint reached
+- `awaiting` - Agent waiting for user input
+- `done` - Agent completed successfully
+- `error` - Agent encountered an error
 
-—
+---
 
-6) Use the product
-- Proxy mode (Compose): `http://localhost:8080`
-  - Header button “Open Activepieces” opens the Studio.
-  - Click Run on Scheduler/MailOps panels and watch logs.
-- Local dev: open UI and Studio separately; ensure CORS/proxy rules allow API calls.
+## 💡 Common Tasks
 
-—
+### Create a new agent workflow
+See: [Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md) → "Creating Your First Workflow"
 
-7) Integrate into Esprit-Hub client (Phaser UI)
-- A “Build Agent” floating-action button already lives in the Helper panel (`client/src/components/HelperButtonGroup.tsx:1`); click it to open `/studio/` in a new tab while staying inside the game.
-- For live status in the Phaser UI, reuse the SSE pattern from `esprit/apps/skyoffice/src/components/NPCPanel.tsx:12` and display event pills/logs in your HUD (still TODO in the Phaser client).
-- If you’re running the client without the reverse proxy, point the FAB at the correct Studio origin by adding `VITE_STUDIO_URL=http://localhost:8080/studio/` to `client/.env.local`.
+### Run an agent from code
+See: [Gateway API Reference](../esprit/docs/agents/GATEWAY.md) → "Triggering Agents"
 
-—
+### Monitor agent execution
+See: [SkyOffice UI Integration](../esprit/docs/agents/SKYOFFICE_UI.md) → "Real-time Monitoring"
 
-8) Security & auth (MVP)
-- Protect `/api/*` with a session (signed cookie) in Gateway; add Nginx `auth_request` for `/studio/` and `/ap/`.
-- Store only connection IDs (Nango) and keep vendor tokens out of the app.
+### Add error handling to a workflow
+See: [Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md) → "Error Handling"
 
-—
+### Test an agent locally
+See: [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md) → "Local Testing"
 
-9) Troubleshooting
-- Studio not loading in drawer? Use `/studio/` (trailing slash) and access via the proxy origin `http://localhost:8080`.
-- SSE drops? Proxy buffering must be disabled for `/api/stream` (already configured in Nginx) and Gateway must stay up.
-- Flow can’t reach Gateway? Inside Compose use Docker DNS `http://skyoffice-gateway:3001`.
-- 404 on `POST /api/run/:agent`? Ensure `agents.json` contains your agent and correct webhook URL.
+### Debug a failing workflow
+See: [Troubleshooting & FAQ](../esprit/docs/agents/TROUBLESHOOTING.md) → "Debugging Workflows"
+
+---
+
+## 📊 Component Overview
+
+```
+┌────────────────────────────────────────────────────┐
+│            Esprit-Hub Agent System                 │
+├────────────────────────────────────────────────────┤
+│                                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────┐ │
+│  │   SkyOffice  │  │   Sim.ai     │  │ Gateway │ │
+│  │   UI         │  │   Builder    │  │   API   │ │
+│  │              │  │              │  │         │ │
+│  │ • Monitor    │  │ • Create     │  │ • Route │ │
+│  │   agents     │  │   workflows  │  │ • Stream│ │
+│  │ • View logs  │  │ • Deploy     │  │ • Trigger
+│  │ • Trigger    │  │ • Test       │  │         │ │
+│  │   runs       │  │              │  │         │ │
+│  └──────────────┘  └──────────────┘  └─────────┘ │
+│         ↑                 ↓               ↓        │
+│         └─────────────────┴───────────────┘        │
+│                  (API + SSE)                       │
+│                                                    │
+└────────────────────────────────────────────────────┘
+
+External Systems ↔ Webhooks ↔ Agent Workflows
+Game Client ↔ Agent Status ↔ Real-time Updates
+```
+
+---
+
+## 🔒 Security & Best Practices
+
+- **Never commit secrets**: Use environment variables (see `.env.example`)
+- **Protect Studio**: In production, require authentication for `/studio/`
+- **Validate webhooks**: Check request signatures when agents call external endpoints
+- **Rate limit**: Add rate limiting to agent triggers in production
+- **Monitor**: Enable detailed logging for agent execution
+
+See [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md) for production security checklist.
+
+---
+
+## 🆘 Need Help?
+
+1. **Check the docs**: Start with the relevant guide above
+2. **Search troubleshooting**: [Troubleshooting & FAQ](../esprit/docs/agents/TROUBLESHOOTING.md)
+3. **Check logs**: `docker compose logs gateway` or `docker compose logs sim`
+4. **Review examples**: [Agent Templates & Examples](../esprit/docs/agents/TEMPLATES.md)
+
+---
+
+## 📖 Table of Contents by Topic
+
+### Building & Development
+- [Getting Started](../esprit/docs/agent.md)
+- [Workflow Building Patterns](../esprit/docs/agents/WORKFLOWS.md)
+- [Agent Templates & Examples](../esprit/docs/agents/TEMPLATES.md)
+
+### Integration & APIs
+- [Gateway API Reference](../esprit/docs/agents/GATEWAY.md)
+- [SkyOffice UI Integration](../esprit/docs/agents/SKYOFFICE_UI.md)
+- [Game Client Integration](../client/docs/AGENT_INTEGRATION.md)
+- [Game Server Integration](../server/docs/AGENT_INTEGRATION.md)
+
+### Operations & Deployment
+- [Deployment & Testing](../esprit/docs/agents/DEPLOYMENT.md)
+- [System Architecture](../esprit/docs/ARCHITECTURE.md)
+- [Troubleshooting & FAQ](../esprit/docs/agents/TROUBLESHOOTING.md)
+
+---
+
+**Last Updated**: 2025-11-08
+**Maintained by**: Esprit-Hub Team
