@@ -87,8 +87,9 @@ docker compose -f infra/docker-compose.yml up -d --build
 ```
 
 4. Access the application:
-- **Main app**: [http://localhost:8080](http://localhost:8080)
+- **Virtual Office (Game)**: [http://localhost:5173](http://localhost:5173)
 - **Sim.ai Studio**: [http://localhost:8080/studio/](http://localhost:8080/studio/)
+- **Sim.ai Workspace**: [http://localhost:8080/studio/workspace](http://localhost:8080/studio/workspace)
 - **Create AI workflows** in Sim Studio and trigger them from NPCs in the virtual office
 
 👉 For detailed AI agent setup instructions, see `esprit/README.md`.

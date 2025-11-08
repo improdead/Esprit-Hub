@@ -117,6 +117,38 @@ export default function HelperButtonGroup() {
   const roomDescription = useAppSelector((state) => state.room.roomDescription)
   const dispatch = useAppDispatch()
   const studioUrl = import.meta.env.VITE_STUDIO_URL || '/studio/'
+  const [isUserLoggedInStudio, setIsUserLoggedInStudio] = useState(false)
+
+  // Check if user is logged into Sim.ai by checking for session
+  React.useEffect(() => {
+    const checkSimStudioLogin = async () => {
+      try {
+        const response = await fetch(`${studioUrl.replace(/\/$/, '')}/api/auth/get-session`, {
+          credentials: 'include',
+          method: 'GET',
+        })
+        const data = await response.json()
+        setIsUserLoggedInStudio(!!data && !!data.user)
+      } catch (error) {
+        setIsUserLoggedInStudio(false)
+      }
+    }
+
+    checkSimStudioLogin()
+  }, [studioUrl])
+
+  const handleStudioButtonClick = () => {
+    // Ensure studioUrl ends with /studio/
+    let baseUrl = studioUrl
+    if (!baseUrl.includes('/studio/')) {
+      baseUrl = baseUrl.replace(/\/$/, '') + '/studio/'
+    }
+    
+    const targetUrl = isUserLoggedInStudio 
+      ? `${baseUrl}workspace`
+      : `${baseUrl}login`
+    window.open(targetUrl, '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <Backdrop>
@@ -217,12 +249,10 @@ export default function HelperButtonGroup() {
             <GitHubIcon />
           </StyledFab>
         </Tooltip>
-        <Tooltip title="Open Agent Builder">
+        <Tooltip title={isUserLoggedInStudio ? "Go to Dashboard" : "Open Agent Builder"}>
           <StyledFab
             size="small"
-            href={studioUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={handleStudioButtonClick}
           >
             <BuildIcon />
           </StyledFab>

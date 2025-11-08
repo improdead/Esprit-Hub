@@ -81,6 +81,25 @@ start_docker_stack() {
   (cd "$ESPRIT_DIR" && docker compose -f "$COMPOSE_FILE" ps)
 }
 
+print_urls() {
+  echo ""
+  echo "════════════════════════════════════════════════════════════"
+  echo "✅ ESPRIT-HUB IS READY!"
+  echo "════════════════════════════════════════════════════════════"
+  echo ""
+  echo "📱 Access the application:"
+  echo "   • Virtual Office:    http://localhost:5173"
+  echo "   • Sim.ai Studio:     http://localhost:8080/studio/"
+  echo "   • Sim.ai Workspace:  http://localhost:8080/studio/workspace"
+  echo "   • Sim.ai Login:      http://localhost:8080/studio/login"
+  echo ""
+  echo "🔗 Note: URLs starting with /workspace (without /studio/) will"
+  echo "   automatically redirect to /studio/workspace/"
+  echo ""
+  echo "════════════════════════════════════════════════════════════"
+  echo ""
+}
+
 main() {
   require_cmd docker
   require_cmd python3
@@ -94,6 +113,8 @@ main() {
   else
     log "Starting game server/client with dependency installation"
   fi
+
+  print_urls
 
   SKIP_INSTALL="$skip" exec "$ROOT_DIR/scripts/run-all.sh"
 }

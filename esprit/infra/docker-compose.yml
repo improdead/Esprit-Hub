@@ -120,6 +120,7 @@ services:
       - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
       - SOCKET_SERVER_URL=http://sim-realtime:3002
       - NEXT_PUBLIC_SOCKET_URL=${PUBLIC_ORIGIN:-http://localhost:8080}
+      - NEXT_TELEMETRY_DISABLED=1
     depends_on:
       postgres:
         condition: service_healthy
