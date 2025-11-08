@@ -17,7 +17,7 @@ interface SocialLoginButtonsProps {
 export function SocialLoginButtons({
   githubAvailable,
   googleAvailable,
-  callbackURL = '/workspace',
+  callbackURL = '/studio/workspace',
   isProduction,
   children,
 }: SocialLoginButtonsProps) {

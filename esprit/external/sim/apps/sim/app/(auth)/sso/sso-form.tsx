@@ -58,7 +58,7 @@ export default function SSOForm() {
   const [emailErrors, setEmailErrors] = useState<string[]>([])
   const [showEmailValidationError, setShowEmailValidationError] = useState(false)
   const [buttonClass, setButtonClass] = useState('auth-button-gradient')
-  const [callbackUrl, setCallbackUrl] = useState('/workspace')
+  const [callbackUrl, setCallbackUrl] = useState('/studio/workspace')
 
   useEffect(() => {
     if (searchParams) {
@@ -144,7 +144,7 @@ export default function SSOForm() {
     }
 
     try {
-      const safeCallbackUrl = validateCallbackUrl(callbackUrl) ? callbackUrl : '/workspace'
+      const safeCallbackUrl = validateCallbackUrl(callbackUrl) ? callbackUrl : '/studio/workspace'
 
       await client.signIn.sso({
         email: emailValue,
