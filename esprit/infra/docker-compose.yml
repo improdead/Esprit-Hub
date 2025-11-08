@@ -68,6 +68,7 @@ services:
     build:
       context: ../external/sim
       dockerfile: docker/app.Dockerfile
+      target: builder
     container_name: sim-migrations
     working_dir: /app/packages/db
     environment:
@@ -136,8 +137,11 @@ services:
       - "3000"
 
   nango:
-    image: nangohq/nango:latest
+    image: nangohq/nango-server:latest
+    platform: linux/amd64
     container_name: nango
+    profiles:
+      - optional
     environment:
       - NANGO_SERVER_URL=http://localhost:3003
     expose:
@@ -146,6 +150,9 @@ services:
   litellm:
     image: ghcr.io/berriai/litellm:latest
     container_name: litellm
+    profiles:
+      - optional
+    command: ["litellm", "--port", "4000"]
     expose:
       - "4000"
 

@@ -1,135 +1,112 @@
-# Running the Esprit-Hub App Locally and in Production
+# Running the Esprit-Hub App
 
-This document walks through everything you need in order to run the complete Esprit-Hub experience (Colyseus realtime server + React/Phaser client) on your machine, as well as the commands that get you ready for deployment.
+This guide explains how to boot the **entire** stack—Sim.ai (Studio + realtime), Gateway, Nginx proxy, Colyseus server, and the React/Phaser client—from this repository. Two scripts cover both scenarios:
 
-## 0. Overview
+1. **`scripts/start-full-stack-first-time.sh`** — one-shot setup. Installs Node deps, generates secrets, and builds the Docker stack.
+2. **`scripts/start-full-stack.sh`** — daily driver. Reuses installed deps and simply launches everything.
 
-- **`server/`** — Node/TypeScript Colyseus server (WebSocket + REST endpoints and Colyseus monitor).
-- **`client/`** — Vite + React + Phaser front-end. Talks to the server on port `2567` via WebSocket and WebRTC (PeerJS).
-- **`types/`** — Shared game schemas that are consumed by both the server and client. No build step is required during development.
+Both scripts keep the game server/client in your foreground terminal so you can stop them with `Ctrl+C`.
 
-Running the app locally means keeping *two* processes alive: one for the server (`yarn start` from the repo root) and one for the client (`yarn dev` from `client/`). The client connects to the server at `ws://localhost:2567` while in development.
+---
 
 ## 1. Prerequisites
 
-| Requirement | Notes |
+| Requirement | Why |
 | --- | --- |
-| Node.js ≥ 18.x LTS | Earlier versions of Node may fail with Vite 3+ and modern TLS defaults. |
-| Yarn Classic (1.x) | This repo uses `yarn` scripts everywhere. Install via `npm install -g yarn` if needed. |
-| Git | Optional but recommended for cloning and version control. |
-| Modern Chromium-based browser | Required for WebRTC audio/video. Chrome, Edge, or Brave on desktop work best. |
-| Camera + microphone | Needed to test video chat, screen sharing, and WebRTC flows. Browsers treat `localhost` as a secure origin so HTTPS is not required when running locally. |
+| **Docker Desktop 4.x+** | Runs Sim.ai, Postgres (pgvector), Redis, Gateway, and the reverse proxy. Make sure Docker Desktop is *running* (whale icon in the macOS menu bar) and bump its Resources → Memory to **at least 12 GB (16 GB recommended) with ~2 GB swap** for the first build. You can lower it afterwards. |
+| **Node.js 18+** | Required by the Colyseus server, scripts, and Vite client. |
+| **Yarn or npm** | `scripts/run-all.sh` prefers `yarn` but falls back to `npm install` automatically. |
+| **openssl + python3** | Used to generate secrets and edit `.env`. They ship with macOS 12+. |
+| **Chromium-based browser, mic, and camera** | Needed to test WebRTC video chat once you spawn multiple avatars. |
 
-> **Tip:** If you need to use npm instead of yarn, convert each command by replacing `yarn <script>` with `npm run <script>`. The repo was tested with yarn, so stick with it when possible.
+> Optional: Install `bun` and `postgresql@16` only if you plan to run the non-Docker local stack described in `docs/LOCAL_STACK.md`.
 
-## 2. Clone and install dependencies
+---
+
+## 2. First-time setup (new machine)
 
 ```bash
 git clone https://github.com/improdead/Esprit-Hub.git
 cd Esprit-Hub
-
-# Install server-level dependencies (runs from repo root)
-yarn install
-
-# Install client dependencies
-cd client && yarn install && cd ..
+./scripts/start-full-stack-first-time.sh
 ```
 
-What the commands do:
+What the script does:
 
-- Root `yarn install` pulls everything required by the Colyseus server (including dev helpers like `ts-node-dev`).
-- `client/yarn install` brings in the React/Vite/Phaser toolchain and UI libraries.
-- No additional install step is needed inside `types/` because the server build already brings in `@colyseus/schema`.
+1. Verifies Docker is running and copies `esprit/.env.example` → `esprit/.env`.
+2. Generates 32-byte values for `BETTER_AUTH_SECRET` and `ENCRYPTION_KEY` if they are missing or still `change-me`.
+3. Runs `docker compose -f esprit/infra/docker-compose.yml up -d --build`, which launches:
+   - Sim.ai Studio (`sim`, port 3000 inside Docker)
+   - Sim.ai realtime server (`sim-realtime`, 3002)
+   - Gateway API (`skyoffice-gateway`, 3001)
+   - SkyOffice/NPC dashboard (`skyoffice-ui`)
+   - Postgres + pgvector, Redis, and the reverse proxy on `http://localhost:8080`
+4. Installs Node dependencies (root + `client/`), ensures `client/.env.local` exists with `VITE_STUDIO_URL=http://localhost:8080/studio/`, and then starts:
+   - Colyseus server on `http://localhost:2567`
+   - Vite client on `http://localhost:5173`
 
-## 3. Run the Colyseus realtime server
+Leave the terminal running. When everything is ready:
+
+- Open `http://localhost:5173` to enter the virtual office.
+- Click the **wrench/build icon** (bottom-right helper bar) to open Sim.ai Studio in a new tab. It reads `VITE_STUDIO_URL`, so it will default to `http://localhost:8080/studio/`.
+- Access the proxy and health endpoints:
+  - Main UI / proxy root: `http://localhost:8080`
+  - Sim.ai Studio: `http://localhost:8080/studio/`
+  - Colyseus monitor: `http://localhost:2567/colyseus`
+
+Stop everything with `Ctrl+C` (game processes) and `cd esprit && docker compose -f infra/docker-compose.yml down` when you no longer need the backend containers.  
+Optional helpers such as **Nango** (OAuth) and **LiteLLM** stay disabled by default; start them only when needed via `cd esprit && docker compose -f infra/docker-compose.yml --profile optional up -d`.
+
+---
+
+## 3. Daily run (fast restart)
+
+Use this after the first run; it skips `yarn install`/`npm install` but still keeps the Docker stack current.
 
 ```bash
-# From the repository root
-yarn start
+cd /path/to/Esprit-Hub
+./scripts/start-full-stack.sh
 ```
 
-- This launches `ts-node-dev` with live reload using `server/index.ts`.
-- Default port is `2567`. Override by setting `PORT=XXXX yarn start`.
-- You should see `Listening on ws://localhost:2567` in the terminal once the server is ready.
-- Visit [http://localhost:2567/colyseus](http://localhost:2567/colyseus) to open the built-in Colyseus monitor dashboard for inspecting rooms, players, and messages.
+- The script re-checks Docker, regenerates secrets only if necessary, and reruns `docker compose up -d --build` so image updates apply automatically.
+- It sets `SKIP_INSTALL=1` for `scripts/run-all.sh`, so the Colyseus server and Vite client start using the already-installed dependencies.
+- URLs and stop commands are identical to the first-time setup.
 
-Keep this terminal open; the process needs to keep running while you use the app.
+If you ever need to force a reinstall (e.g., after deleting `node_modules`), run `SKIP_INSTALL=0 ./scripts/start-full-stack.sh` or just re-run the `*-first-time` script.
 
-## 4. Run the Vite client
+---
 
-```bash
-cd client
-yarn dev
-```
+## 4. Service map
 
-- Vite's default dev server port is `5173`. Override it with `yarn dev --port 3000` if you prefer.
-- Open the URL printed by Vite (usually [http://localhost:5173](http://localhost:5173)).
-- Vite reloads automatically when you save client-side files (`client/src/**`).
-- When `process.env.NODE_ENV !== 'production'`, the client automatically targets `ws://localhost:2567`, so no `.env` is required for local work.
+| Service | How it starts | Port(s) | Notes |
+| --- | --- | --- | --- |
+| Sim.ai Studio UI | Docker (`sim`) | Proxy: `http://localhost:8080/studio/` | First-run login lives here. |
+| Sim.ai realtime | Docker (`sim-realtime`) | 3002 internal | Socket server used by Studio. |
+| Gateway API | Docker (`skyoffice-gateway`) | 3001 internal | Exposed via proxy `http://localhost:8080/api/`. |
+| SkyOffice NPC dashboard | Docker (`skyoffice-ui`) | Served through the proxy | Optional control panel. |
+| Colyseus server | `scripts/run-all.sh` | 2567 | Includes `/colyseus` monitor. |
+| Game client (React/Phaser) | `scripts/run-all.sh` | 5173 | Dev server with hot reload. |
+| Nango / LiteLLM (optional) | `docker compose --profile optional up -d` | 3003 / 4000 | Disabled unless you need OAuth or LLM proxying.
 
-> **Testing tip:** To simulate multiple users, open a private/incognito window or a different browser and connect to the same URL.
+---
 
-## 5. Quick workflow recap
+## 5. Agent Builder button (Sim.ai link)
 
-1. `yarn start` in the project root → starts the Colyseus server on port `2567`.
-2. `cd client && yarn dev` → starts the UI on port `5173`.
-3. Open `http://localhost:5173` → log in, pick an avatar, and walk around.
-4. (Optional) Open `http://localhost:2567/colyseus` to inspect rooms and active sessions.
-5. Commit your changes or iterate further; both processes hot-reload automatically.
+- Component: `client/src/components/HelperButtonGroup.tsx`.
+- Environment variable: `VITE_STUDIO_URL` (injected by Vite at build time).  
+  - `scripts/run-all.sh` ensures `client/.env.local` exists and sets `VITE_STUDIO_URL=http://localhost:8080/studio/` unless you override it.
+- Behavior: Clicking the build/wrench Fab opens `VITE_STUDIO_URL` in a new tab, so the in-game “Open Agent Builder” button always matches whatever Studio origin you configure.
 
-## 6. Environment configuration
+If you point Sim.ai somewhere else (e.g., a remote server), edit `client/.env.local`, restart the client dev server, and the button will open the new URL.
 
-| Variable | Location | Purpose |
-| --- | --- | --- |
-| `PORT` | Server (`yarn start`) | Overrides the WebSocket/HTTP port. Defaults to `2567`. |
-| `VITE_SERVER_URL` | Client build time (`client/.env`, `.env.local`, or CI variables) | Used **only** when `NODE_ENV === 'production'`. Set it to the public WebSocket endpoint, e.g. `wss://your-domain.com`. |
+---
 
-Example `client/.env.local` when deploying the client separately from the server:
+## 6. Troubleshooting
 
-```bash
-VITE_SERVER_URL=wss://api.your-domain.com
-```
+- **Docker isn’t running** → Scripts exit early with `Error: Docker does not appear to be running`. Launch Docker Desktop and retry.
+- **Ports already in use** → Stop previous runs: `cd esprit && docker compose -f infra/docker-compose.yml down` and kill stray Vite/Colyseus processes (`lsof -i :5173`, etc.).
+- **Client opens but Sim.ai link fails** → Make sure `docker compose ps` shows the `sim` container as `healthy`, and confirm `client/.env.local` contains the desired `VITE_STUDIO_URL`.
+- **Need to reset secrets** → Edit `esprit/.env` manually; the scripts only generate values when keys are missing or still `change-me`. Re-run the first-time script afterward.
+- **Fresh start** → Run `docker compose -f infra/docker-compose.yml down -v` inside `esprit` to drop volumes (Postgres/Redis data) and re-run the first-time script.
 
-## 7. Production builds and deployment
-
-### Build & run the server (Node)
-
-```bash
-# From repo root
-yarn install
-cd types && yarn install && cd ..
-cd server && tsc --project tsconfig.server.json
-node lib/index.js   # or set PORT=80 node lib/index.js
-```
-
-- The `cd types && yarn` step mirrors the existing deploy script and guarantees `@colyseus/schema` stays installed even in environments that install each package separately. If your deployment installs dependencies only once at the repo root, you can skip it.
-- The provided `heroku-postbuild` script automates the TypeScript compile for Heroku-style deployments (`yarn heroku-postbuild`).
-- A Heroku-style `Procfile` is already present. Double-check that its `web` command points at the compiled entry point (by default `node server/lib/index.js`).
-
-### Build & serve the client (static)
-
-```bash
-cd client
-VITE_SERVER_URL=wss://api.your-domain.com yarn build
-npx serve dist   # or deploy the dist/ folder to Netlify, Vercel, S3, etc.
-```
-
-- The Netlify configuration (`netlify.toml`) runs `yarn` in `types/` and `client/` before building and publishes `client/dist`. Ensure the Netlify UI has a `VITE_SERVER_URL` environment variable pointing to your production Colyseus server.
-- To preview the production build locally, run `yarn preview` inside `client/`.
-
-### Putting it together
-
-1. Deploy the Node server (Heroku, Render, Fly.io, your own VM, etc.) using `yarn heroku-postbuild` → `node server/lib/index.js`.
-2. Deploy the static client (`client/dist`) to Netlify/Vercel/S3.
-3. Set `VITE_SERVER_URL` in the client environment so the browser talks to your server's public WebSocket endpoint.
-
-## 8. Troubleshooting
-
-- **Client hangs on “Connecting to lobby”** → The WebSocket handshake likely failed. Confirm the server is running on `PORT` 2567, no firewall blocks it, and the client points to the right host (set `VITE_SERVER_URL` when not on localhost).
-- **`EADDRINUSE` errors when starting the server** → Another process is occupying port `2567`. Either stop it or run `PORT=3001 yarn start` and update `VITE_SERVER_URL` (for production builds) to match.
-- **Camera/mic not detected** → Make sure you granted permission in the browser. Chrome treats each origin separately; re-allow permissions after switching between `localhost` and deployed URLs.
-- **Screen sharing fails on Firefox/Safari** → PeerJS works best on Chromium-based browsers. Use Chrome for local development to avoid browser-specific WebRTC quirks.
-- **Vite serves on `http://127.0.0.1` but other devices cannot connect** → Run `yarn dev --host 0.0.0.0 --port 5173` and make sure your OS firewall allows inbound traffic.
-- **Production client connects to the wrong server** → Remember that `VITE_SERVER_URL` is resolved at *build time*. Rebuild the client whenever you change the backend endpoint.
-
-You are now ready to run the full Esprit-Hub experience locally or ship it to production. Happy hacking!
+With these two commands you can now launch the full Esprit-Hub + Sim.ai experience on any machine in minutes.

@@ -23,8 +23,17 @@ install_deps() {
   (cd "$dir" && npm install >/dev/null)
 }
 
-install_deps "$ROOT_DIR"
-install_deps "$ROOT_DIR/client"
+maybe_install() {
+  local dir="$1"
+  if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
+    log "Skipping dependency installation in $dir (SKIP_INSTALL=1)"
+    return 0
+  fi
+  install_deps "$dir"
+}
+
+maybe_install "$ROOT_DIR"
+maybe_install "$ROOT_DIR/client"
 
 ensure_client_env() {
   local default_url="${VITE_STUDIO_URL:-http://localhost:8080/studio/}"
