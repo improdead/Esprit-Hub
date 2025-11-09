@@ -391,7 +391,7 @@ function SignupFormContent({
       })() && (
         <div className={`${inter.className} mt-8`}>
           <SSOLoginButton
-            callbackURL={redirectUrl || '/workspace'}
+            callbackURL={redirectUrl || '/studio/workspace'}
             variant='primary'
             primaryClassName={buttonClass}
           />
@@ -551,12 +551,12 @@ function SignupFormContent({
           <SocialLoginButtons
             githubAvailable={githubAvailable}
             googleAvailable={googleAvailable}
-            callbackURL={redirectUrl || '/workspace'}
+            callbackURL={redirectUrl || '/studio/workspace'}
             isProduction={isProduction}
           >
             {isTruthy(getEnv('NEXT_PUBLIC_SSO_ENABLED')) && (
               <SSOLoginButton
-                callbackURL={redirectUrl || '/workspace'}
+                callbackURL={redirectUrl || '/studio/workspace'}
                 variant='outline'
                 primaryClassName={buttonClass}
               />

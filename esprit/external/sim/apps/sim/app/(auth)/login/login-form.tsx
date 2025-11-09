@@ -107,7 +107,7 @@ export default function LoginPage({
   const [showValidationError, setShowValidationError] = useState(false)
   const [buttonClass, setButtonClass] = useState('auth-button-gradient')
 
-  const [callbackUrl, setCallbackUrl] = useState('/workspace')
+  const [callbackUrl, setCallbackUrl] = useState('/studio/workspace')
   const [isInviteFlow, setIsInviteFlow] = useState(false)
 
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
@@ -218,7 +218,7 @@ export default function LoginPage({
     }
 
     try {
-      const safeCallbackUrl = validateCallbackUrl(callbackUrl) ? callbackUrl : '/workspace'
+      const safeCallbackUrl = validateCallbackUrl(callbackUrl) ? callbackUrl : '/studio/workspace'
 
       const result = await client.signIn.email(
         {
