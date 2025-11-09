@@ -148,22 +148,22 @@ export function Sidebar() {
 
   // Check if we're on a workflow page
   const isOnWorkflowPage = useMemo(() => {
-    // Pattern: /workspace/[workspaceId]/w/[workflowId]
-    const workflowPageRegex = /^\/workspace\/[^/]+\/w\/[^/]+$/
+    // Pattern: /workspace/[workspaceId]/w/[workflowId] or /studio/workspace/[workspaceId]/w/[workflowId]
+    const workflowPageRegex = /^\/(studio\/)?workspace\/[^/]+\/w\/[^/]+$/
     return workflowPageRegex.test(pathname)
   }, [pathname])
 
   // Check if we're on the logs page
   const isOnLogsPage = useMemo(() => {
-    // Pattern: /workspace/[workspaceId]/logs
-    const logsPageRegex = /^\/workspace\/[^/]+\/logs$/
+    // Pattern: /workspace/[workspaceId]/logs or /studio/workspace/[workspaceId]/logs
+    const logsPageRegex = /^\/(studio\/)?workspace\/[^/]+\/logs$/
     return logsPageRegex.test(pathname)
   }, [pathname])
 
   // Check if we're on any knowledge base page (overview or document)
   const isOnKnowledgePage = useMemo(() => {
-    // Pattern: /workspace/[workspaceId]/knowledge/[id] or /workspace/[workspaceId]/knowledge/[id]/[documentId]
-    const knowledgePageRegex = /^\/workspace\/[^/]+\/knowledge\/[^/]+/
+    // Pattern: /workspace/[workspaceId]/knowledge/[id] or /studio/workspace/[workspaceId]/knowledge/[id]
+    const knowledgePageRegex = /^\/(studio\/)?workspace\/[^/]+\/knowledge\/[^/]+/
     return knowledgePageRegex.test(pathname)
   }, [pathname])
 
@@ -174,20 +174,21 @@ export function Sidebar() {
     }
 
     // Handle both KB overview (/knowledge/[kbId]) and document page (/knowledge/[kbId]/[docId])
-    const kbOverviewMatch = pathname.match(/^\/workspace\/[^/]+\/knowledge\/([^/]+)$/)
-    const docPageMatch = pathname.match(/^\/workspace\/[^/]+\/knowledge\/([^/]+)\/([^/]+)$/)
+    // Note: (studio\/)? is index [1], so captured groups shift by 1
+    const kbOverviewMatch = pathname.match(/^\/(studio\/)?workspace\/[^/]+\/knowledge\/([^/]+)$/)
+    const docPageMatch = pathname.match(/^\/(studio\/)?workspace\/[^/]+\/knowledge\/([^/]+)\/([^/]+)$/)
 
     if (docPageMatch) {
-      // Document page - has both kbId and docId
+      // Document page - has both kbId and docId (indices shifted due to optional studio\/ group)
       return {
-        knowledgeBaseId: docPageMatch[1],
-        documentId: docPageMatch[2],
+        knowledgeBaseId: docPageMatch[2],
+        documentId: docPageMatch[3],
       }
     }
     if (kbOverviewMatch) {
-      // KB overview page - has only kbId
+      // KB overview page - has only kbId (index shifted due to optional studio\/ group)
       return {
-        knowledgeBaseId: kbOverviewMatch[1],
+        knowledgeBaseId: kbOverviewMatch[2],
         documentId: null,
       }
     }
